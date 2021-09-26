@@ -5,22 +5,145 @@
   More context in the issue:
     https://github.com/halfzebra/create-elm-app/issues/320
 */
-[data-elm-hot="true"] {
+[data-elm-hot='true'] {
   height: inherit;
 }
 
 body {
-  font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande',
+    'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   text-align: center;
   color: #293c4b;
 }
 
 h1 {
+  color: white;
   font-size: 30px;
+  letter-spacing: 2px;
+  margin: 0;
 }
 
-img {
-  margin: 20px 0;
-  max-width: 200px;
+/* Header */
+
+.header {
+  background-color: #293c4b;
+  padding: 15px;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+/* Footer */
+
+.footer {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer > p {
+  display: inline-block;
+}
+
+.footer__elm-logo {
+  margin: 0 7.5px;
+  display: inline-block;
+  height: 1.25em;
+  width: 1.25em;
+}
+
+/* Content */
+.wrapper {
+  margin: 0 auto;
+  width: 95%;
+  max-width: 1000px;
+}
+
+.search {
+  min-height: 110px;
+  background-color: steelblue;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+}
+
+.search__field {
+  margin-bottom: 10px;
+}
+
+.search__field > label {
+  color: white;
+  text-transform: uppercase;
+  font-size: 0.9em;
+  display: block;
+  letter-spacing: 1px;
+  text-align: left;
+  margin-bottom: 10px;
+  margin-left: 13px;
+}
+
+.search__field > input {
+  background-color: white;
+  border-radius: 8px;
+  text-transform: uppercase;
+  font-size: 1em;
+  font-weight: 600;
+  padding-left: 10px;
+  margin-bottom: 15px;
+  height: 40px;
+  min-width: 100px;
+  border: 3px solid white;
+}
+
+.search__buttons > button {
+  min-height: 48px;
+  border-radius: 8px;
+  min-width: 120px;
+  border: 3px solid white;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s ease-in-out;
+  opacity: 0.8;
+  margin-right: 15px;
+}
+
+.search__buttons > button:hover {
+  min-height: 48px;
+  border-radius: 8px;
+  min-width: 120px;
+  border: 3px solid white;
+  background-color: transparent;
+  color: white;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 1;
+}
+
+.search__buttons > button:disabled {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.results__item {
+  border-bottom: 3px solid lightsteelblue;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+
+.results__item > h3,
+.results__item > p {
+  margin: 0;
+  display: block;
+  text-align: left;
+  padding: 5px 15px;
 }

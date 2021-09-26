@@ -123,84 +123,7 @@ subscriptions _ =
 
 
 ---- VIEW ----
---  TODO: Handle data load states - ie. Loading, Not Asked, Fail, Success.
 --  TODO: Add simple styles.
-
-
-view : Model -> Browser.Document Msg
-view model =
-    let
-        postcodeResults =
-            case model.postcodeResults of
-                NotAsked ->
-                    text "Initialising."
-
-                Loading ->
-                    text "Loading."
-
-                Failure err ->
-                    text ("Error: " ++ errorToString err)
-
-                Success response ->
-                    resultItem response
-
-        nearestPostcodesResults =
-            case model.nearestPostcodesResults of
-                NotAsked ->
-                    p [] [ text "Initialising." ]
-
-                Loading ->
-                    p [] [ text "Loading." ]
-
-                Failure err ->
-                    p [] [ text ("Error: " ++ errorToString err) ]
-
-                Success response ->
-                    div [] (List.map resultItem response)
-    in
-    { title = "Postcode finder"
-    , body =
-        [ div [ class "header" ]
-            [ img [ src "/logo.svg" ] []
-            , h1 [] [ text "Postcode Finder" ]
-            ]
-        , div [ class "wrapper" ]
-            [ div [ class "search" ]
-                [ label
-                    [ for "postcode", class "search__label" ]
-                    [ text "Postcode" ]
-                , input
-                    [ name "postcode"
-                    , id "postcode"
-                    , class "search__input"
-                    , value model.searchPostcodeform.postcode
-                    , onInput UpdatePostcode
-                    , placeholder default.postcode
-                    ]
-                    []
-                , button [ onClick ResetForm ] [ text "Reset" ]
-                , button
-                    [ disabled
-                        (String.isEmpty model.searchPostcodeform.postcode
-                            || (String.length model.searchPostcodeform.postcode < minLength)
-                            || (String.length model.searchPostcodeform.postcode > maxLength)
-                        )
-                    , onClick SubmitForm
-                    ]
-                    [ text "Search" ]
-                ]
-            , div [ class "results" ]
-                [ postcodeResults
-                , nearestPostcodesResults
-                ]
-            ]
-        , div [ class "footer" ]
-            [ p []
-                [ text "Written elegantly using Elm."
-                ]
-            ]
-        ]
-    }
 
 
 viewInput : String -> String -> String -> (String -> msg) -> Html msg
@@ -210,10 +133,10 @@ viewInput t p v toMsg =
 
 resultItem : PostcodeDetails -> Html Msg
 resultItem item =
-    div []
-        [ h2 [] [ text item.postcode ]
-        , p [] [ text item.country ]
-        , p [] [ text item.region ]
+    div [ class "results__item" ]
+        [ h3 [] [ text item.postcode ]
+        , p [] [ text ("Country: " ++ item.country) ]
+        , p [] [ text ("Region: " ++ item.region) ]
         ]
 
 
@@ -245,3 +168,92 @@ errorToString error =
 
         BadBody errorMessage ->
             "Bad Body - " ++ errorMessage
+
+
+view : Model -> Browser.Document Msg
+view model =
+    let
+        postcodeResults =
+            case model.postcodeResults of
+                NotAsked ->
+                    text "Initialising."
+
+                Loading ->
+                    text "Loading."
+
+                Failure err ->
+                    text ("Error: " ++ errorToString err)
+
+                Success response ->
+                    div []
+                        [ h2 [] [ text "Matching Postcode" ]
+                        , resultItem response
+                        ]
+
+        nearestPostcodesResults =
+            case model.nearestPostcodesResults of
+                NotAsked ->
+                    p [] [ text "Initialising." ]
+
+                Loading ->
+                    p [] [ text "Loading." ]
+
+                Failure err ->
+                    p [] [ text ("Error: " ++ errorToString err) ]
+
+                Success response ->
+                    div []
+                        [ h2 [] [ text "Nearby Postcodes" ]
+                        , div []
+                            (response
+                                |> List.map resultItem
+                            )
+                        ]
+    in
+    { title = "Postcode finder"
+    , body =
+        [ div [ class "header" ]
+            [ div [ class "wrapper" ]
+                [ h1 [] [ text "Postcode Finder" ]
+                ]
+            ]
+        , div [ class "wrapper" ]
+            [ div [ class "search" ]
+                [ div [ class "search__field" ]
+                    [ label
+                        [ for "postcode" ]
+                        [ text "Postcode" ]
+                    , input
+                        [ name "postcode"
+                        , id "postcode"
+                        , value model.searchPostcodeform.postcode
+                        , onInput UpdatePostcode
+                        , placeholder default.postcode
+                        ]
+                        []
+                    ]
+                , div [ class "search__buttons" ]
+                    [ button [ onClick ResetForm ] [ text "Reset" ]
+                    , button
+                        [ disabled
+                            (String.isEmpty model.searchPostcodeform.postcode
+                                || (String.length model.searchPostcodeform.postcode < minLength)
+                                || (String.length model.searchPostcodeform.postcode > maxLength)
+                            )
+                        , onClick SubmitForm
+                        ]
+                        [ text "Search" ]
+                    ]
+                ]
+            , div [ class "results" ]
+                [ postcodeResults
+                , nearestPostcodesResults
+                ]
+            ]
+        , div [ class "footer" ]
+            [ p []
+                [ text "Written elegantly using " ]
+            , img [ class "footer__elm-logo", src "/logo.svg" ] []
+            ]
+        ]
+    }
