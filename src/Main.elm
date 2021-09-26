@@ -141,8 +141,8 @@ view model =
                 Failure err ->
                     text ("Error: " ++ errorToString err)
 
-                Success details ->
-                    resultItem details
+                Success response ->
+                    resultItem response
 
         nearestPostcodesResults =
             case model.nearestPostcodesResults of
@@ -155,8 +155,8 @@ view model =
                 Failure err ->
                     p [] [ text ("Error: " ++ errorToString err) ]
 
-                Success listOfPostcodes ->
-                    div [] (List.map resultItem listOfPostcodes)
+                Success response ->
+                    div [] (List.map resultItem response)
     in
     { title = "Postcode finder"
     , body =
@@ -244,4 +244,4 @@ errorToString error =
             "Unknown error"
 
         BadBody errorMessage ->
-            errorMessage
+            "Bad Body - " ++ errorMessage
