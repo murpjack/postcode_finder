@@ -29,8 +29,8 @@ h1 {
 .header {
   background-color: #293c4b;
   padding: 15px;
+  height: 65;
   text-align: left;
-  margin-bottom: 20px;
 }
 
 /* Footer */
@@ -40,6 +40,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 50px;
 }
 
 .footer > p {
@@ -54,10 +55,18 @@ h1 {
 }
 
 /* Content */
+
+/* Wrapper centers content. */
 .wrapper {
   margin: 0 auto;
   width: 95%;
   max-width: 1000px;
+}
+
+.header + div {
+  padding-top: 20px;
+  min-height: calc(100vh - 65px - 50px);
+  box-sizing: border-box;
 }
 
 .search {
