@@ -10,8 +10,9 @@ type Msg
     | ListNearestPostcodesResponse (WebData (List PostcodeDetails))
     | UrlRequest Browser.UrlRequest
     | UrlChange Url
-    | FormSubmitted
-    | FormReset
+    | UpdatePostcode Postcode
+    | SubmitForm
+    | ResetForm
 
 
 
@@ -22,7 +23,7 @@ type alias Model =
     { postcodeResults : WebData PostcodeDetails
     , nearestPostcodesResults : WebData (List PostcodeDetails)
     , currentRoute : Route
-    , searchPostcodeform : { postcode : Postcode }
+    , searchPostcodeform : SearchPostcodeFom
     }
 
 
@@ -34,6 +35,10 @@ type Route
     = Root
     | Postcode Postcode
     | NotFoundRoute
+
+
+type alias SearchPostcodeFom =
+    { postcode : Postcode }
 
 
 

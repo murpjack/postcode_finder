@@ -3,9 +3,11 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (autocomplete, class, for, id, name, placeholder, src, value)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onClick, onInput)
+import Http exposing (..)
 import PostcodeIo exposing (getNearestPostcodes, getPostcode)
-import RemoteData
+import RemoteData exposing (..)
 import Routing
 import Types exposing (Model, Msg(..), PostcodeDetails, Route(..))
 import Url exposing (Url)
@@ -36,14 +38,27 @@ default =
 
 
 
+-- JM - According to Google, the shortest/longest postcode in UK are 5 and 7 characters respoectively
+
+
+maxLength : Int
+maxLength =
+    7
+
+
+minLength : Int
+minLength =
+    5
+
+
+
 -- TODO: Move these api calls to the Update method.
 
 
 init : flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url _ =
     ( initialModel (Routing.parseLocation url)
-    , Cmd.batch
-        [ getPostcode default.postcode, getNearestPostcodes default.postcode ]
+    , Cmd.batch []
     )
 
 
@@ -52,7 +67,7 @@ initialModel route =
     { postcodeResults = RemoteData.Loading
     , nearestPostcodesResults = RemoteData.Loading
     , currentRoute = route
-    , searchPostcodeform = { postcode = default.postcode }
+    , searchPostcodeform = { postcode = "" }
     }
 
 
@@ -78,11 +93,23 @@ update msg model =
         UrlChange _ ->
             ( model, Cmd.none )
 
-        FormSubmitted ->
-            ( model, Cmd.none )
+        UpdatePostcode postcode ->
+            ( { model
+                | searchPostcodeform = { postcode = postcode }
+              }
+            , Cmd.none
+            )
 
-        FormReset ->
-            ( model, Cmd.none )
+        SubmitForm ->
+            ( model
+            , Cmd.batch
+                [ getPostcode model.searchPostcodeform.postcode
+                , getNearestPostcodes model.searchPostcodeform.postcode
+                ]
+            )
+
+        ResetForm ->
+            ( { model | searchPostcodeform = { postcode = "" } }, Cmd.none )
 
 
 
@@ -102,6 +129,35 @@ subscriptions _ =
 
 view : Model -> Browser.Document Msg
 view model =
+    let
+        postcodeResults =
+            case model.postcodeResults of
+                NotAsked ->
+                    text "Initialising."
+
+                Loading ->
+                    text "Loading."
+
+                Failure err ->
+                    text ("Error: " ++ errorToString err)
+
+                Success details ->
+                    resultItem details
+
+        nearestPostcodesResults =
+            case model.nearestPostcodesResults of
+                NotAsked ->
+                    p [] [ text "Initialising." ]
+
+                Loading ->
+                    p [] [ text "Loading." ]
+
+                Failure err ->
+                    p [] [ text ("Error: " ++ errorToString err) ]
+
+                Success listOfPostcodes ->
+                    div [] (List.map resultItem listOfPostcodes)
+    in
     { title = "Postcode finder"
     , body =
         [ div [ class "header" ]
@@ -110,26 +166,32 @@ view model =
             ]
         , div [ class "wrapper" ]
             [ div [ class "search" ]
-                [ form [ class "search__form", autocomplete True ]
-                    [ label
-                        [ for "postcode", class "search__label" ]
-                        [ text "Postcode" ]
-                    , input
-                        [ name "postcode"
-                        , id "postcode"
-                        , class "search__input"
-                        , value model.searchPostcodeform.postcode
-                        , placeholder default.postcode
-                        ]
-                        []
-                    , button [] [ text "Search" ]
+                [ label
+                    [ for "postcode", class "search__label" ]
+                    [ text "Postcode" ]
+                , input
+                    [ name "postcode"
+                    , id "postcode"
+                    , class "search__input"
+                    , value model.searchPostcodeform.postcode
+                    , onInput UpdatePostcode
+                    , placeholder default.postcode
                     ]
+                    []
+                , button [ onClick ResetForm ] [ text "Reset" ]
+                , button
+                    [ disabled
+                        (String.isEmpty model.searchPostcodeform.postcode
+                            || (String.length model.searchPostcodeform.postcode < minLength)
+                            || (String.length model.searchPostcodeform.postcode > maxLength)
+                        )
+                    , onClick SubmitForm
+                    ]
+                    [ text "Search" ]
                 ]
             , div [ class "results" ]
-                [ resultItem default
-                , resultItem default
-                , resultItem default
-                , resultItem default
+                [ postcodeResults
+                , nearestPostcodesResults
                 ]
             ]
         , div [ class "footer" ]
@@ -141,6 +203,11 @@ view model =
     }
 
 
+viewInput : String -> String -> String -> (String -> msg) -> Html msg
+viewInput t p v toMsg =
+    input [ type_ t, placeholder p, value v, onInput toMsg ] []
+
+
 resultItem : PostcodeDetails -> Html Msg
 resultItem item =
     div []
@@ -148,3 +215,33 @@ resultItem item =
         , p [] [ text item.country ]
         , p [] [ text item.region ]
         ]
+
+
+
+-- JM - This handles different possible Http error types.
+-- TODO: Improve Error messages to be more helpful to app user.
+
+
+errorToString : Http.Error -> String
+errorToString error =
+    case error of
+        BadUrl url ->
+            "The URL " ++ url ++ " was invalid"
+
+        Timeout ->
+            "Unable to reach the server, try again"
+
+        NetworkError ->
+            "Unable to reach the server, check your network connection"
+
+        BadStatus 500 ->
+            "The server had a problem, try again later"
+
+        BadStatus 400 ->
+            "Verify your information and try again"
+
+        BadStatus _ ->
+            "Unknown error"
+
+        BadBody errorMessage ->
+            errorMessage
