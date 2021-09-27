@@ -2,7 +2,7 @@
 
 Elegantly written in Elm and Create Elm App - CEA
 
-This site is hosted on Netlify and can be found @ **[jolly-dijkstra-5d82c8.netlify.app]**
+This site is hosted on Netlify and can be found @ **[https://dreamy-ride-0d9aed.netlify.app]**
 
 This project took around two hours.
 
