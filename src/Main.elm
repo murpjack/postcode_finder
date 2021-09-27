@@ -2,15 +2,16 @@ module Main exposing (..)
 
 import Browser
 import Browser.Navigation as Nav
+import Constants exposing (..)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Http exposing (..)
 import PostcodeIo exposing (getNearestPostcodes, getPostcode)
 import RemoteData exposing (..)
-import Routing
-import Types exposing (Model, Msg(..), PostcodeDetails, Route(..))
+import Types exposing (Model, Msg(..), PostcodeDetails)
 import Url exposing (Url)
+import Url.Parser exposing (..)
 
 
 
@@ -29,45 +30,19 @@ main =
         }
 
 
-default : PostcodeDetails
-default =
-    { postcode = "CB40GF"
-    , country = "England"
-    , region = "East of England"
-    }
-
-
-
--- JM - According to Google, the shortest/longest postcode in UK are 5 and 7 characters respoectively
-
-
-maxLength : Int
-maxLength =
-    7
-
-
-minLength : Int
-minLength =
-    5
-
-
-
--- TODO: Move these api calls to the Update method.
-
-
 init : flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url _ =
-    ( initialModel (Routing.parseLocation url)
-    , Cmd.batch []
+init _ url key =
+    ( initialModel key
+    , Cmd.none
     )
 
 
-initialModel : Route -> Model
-initialModel route =
-    { postcodeResults = RemoteData.Loading
-    , nearestPostcodesResults = RemoteData.Loading
-    , currentRoute = route
-    , searchPostcodeform = { postcode = "" }
+initialModel : Nav.Key -> Model
+initialModel key =
+    { postcodeResults = RemoteData.NotAsked
+    , nearestPostcodesResults = RemoteData.NotAsked
+    , postcode = ""
+    , key = key
     }
 
 
@@ -80,13 +55,12 @@ update msg model =
     case msg of
         SinglePostcodeResponse response ->
             ( { model | postcodeResults = response }
-            , Cmd.none
+            , Nav.pushUrl model.key (String.toLower model.postcode)
             )
 
         ListNearestPostcodesResponse response ->
             ( { model | nearestPostcodesResults = response }, Cmd.none )
 
-        --  TODO: Plumb in remaining Update conditions.
         UrlRequest _ ->
             ( model, Cmd.none )
 
@@ -95,7 +69,7 @@ update msg model =
 
         UpdatePostcode postcode ->
             ( { model
-                | searchPostcodeform = { postcode = postcode }
+                | postcode = postcode
               }
             , Cmd.none
             )
@@ -103,13 +77,13 @@ update msg model =
         SubmitForm ->
             ( model
             , Cmd.batch
-                [ getPostcode model.searchPostcodeform.postcode
-                , getNearestPostcodes model.searchPostcodeform.postcode
+                [ getPostcode model.postcode
+                , getNearestPostcodes model.postcode
                 ]
             )
 
         ResetForm ->
-            ( { model | searchPostcodeform = { postcode = "" } }, Cmd.none )
+            ( { model | postcode = "" }, Cmd.none )
 
 
 
@@ -123,51 +97,6 @@ subscriptions _ =
 
 
 ---- VIEW ----
---  TODO: Add simple styles.
-
-
-viewInput : String -> String -> String -> (String -> msg) -> Html msg
-viewInput t p v toMsg =
-    input [ type_ t, placeholder p, value v, onInput toMsg ] []
-
-
-resultItem : PostcodeDetails -> Html Msg
-resultItem item =
-    div [ class "results__item" ]
-        [ h3 [] [ text item.postcode ]
-        , p [] [ text ("Country: " ++ item.country) ]
-        , p [] [ text ("Region: " ++ item.region) ]
-        ]
-
-
-
--- JM - This handles different possible Http error types.
--- TODO: Improve Error messages to be more helpful to app user.
-
-
-errorToString : Http.Error -> String
-errorToString error =
-    case error of
-        BadUrl url ->
-            "The URL " ++ url ++ " was invalid"
-
-        Timeout ->
-            "Unable to reach the server, try again"
-
-        NetworkError ->
-            "Unable to reach the server, check your network connection"
-
-        BadStatus 500 ->
-            "The server had a problem, try again later"
-
-        BadStatus 400 ->
-            "Verify your information and try again"
-
-        BadStatus _ ->
-            "Unknown error"
-
-        BadBody errorMessage ->
-            "Bad Body - " ++ errorMessage
 
 
 view : Model -> Browser.Document Msg
@@ -226,9 +155,10 @@ view model =
                     , input
                         [ name "postcode"
                         , id "postcode"
-                        , value model.searchPostcodeform.postcode
+                        , value model.postcode
                         , onInput UpdatePostcode
-                        , placeholder default.postcode
+                        , placeholder featureSpace.postcode
+                        , maxlength 7
                         ]
                         []
                     ]
@@ -236,9 +166,9 @@ view model =
                     [ button [ onClick ResetForm ] [ text "Reset" ]
                     , button
                         [ disabled
-                            (String.isEmpty model.searchPostcodeform.postcode
-                                || (String.length model.searchPostcodeform.postcode < minLength)
-                                || (String.length model.searchPostcodeform.postcode > maxLength)
+                            (String.isEmpty model.postcode
+                                || (String.length model.postcode < minLength)
+                                || (String.length model.postcode > maxLength)
                             )
                         , onClick SubmitForm
                         ]
@@ -257,3 +187,47 @@ view model =
             ]
         ]
     }
+
+
+viewInput : String -> String -> String -> (String -> msg) -> Html msg
+viewInput t p v toMsg =
+    input [ type_ t, placeholder p, value v, onInput toMsg ] []
+
+
+resultItem : PostcodeDetails -> Html Msg
+resultItem item =
+    div [ class "results__item" ]
+        [ h3 [] [ text item.postcode ]
+        , p [] [ text ("Country: " ++ item.country) ]
+        , p [] [ text ("Region: " ++ item.region) ]
+        ]
+
+
+
+-- JM - This handles different possible Http error types.
+-- TODO: Improve Error messages to be more helpful to app user.
+
+
+errorToString : Http.Error -> String
+errorToString error =
+    case error of
+        BadUrl url ->
+            "The URL " ++ url ++ " was invalid"
+
+        Timeout ->
+            "Unable to reach the server, try again"
+
+        NetworkError ->
+            "Unable to reach the server, check your network connection"
+
+        BadStatus 500 ->
+            "The server had a problem, try again later"
+
+        BadStatus 400 ->
+            "Verify your information and try again"
+
+        BadStatus _ ->
+            "Unknown error"
+
+        BadBody errorMessage ->
+            "Bad Body - " ++ errorMessage

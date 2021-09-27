@@ -1,6 +1,7 @@
 module Types exposing (..)
 
 import Browser
+import Browser.Navigation as Nav
 import RemoteData exposing (WebData)
 import Url exposing (Url)
 
@@ -22,23 +23,13 @@ type Msg
 type alias Model =
     { postcodeResults : WebData PostcodeDetails
     , nearestPostcodesResults : WebData (List PostcodeDetails)
-    , currentRoute : Route
-    , searchPostcodeform : SearchPostcodeFom
+    , postcode : Postcode
+    , key : Nav.Key
     }
 
 
 type alias Postcode =
     String
-
-
-type Route
-    = Root
-    | Postcode Postcode
-    | NotFoundRoute
-
-
-type alias SearchPostcodeFom =
-    { postcode : Postcode }
 
 
 
