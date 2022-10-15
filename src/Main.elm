@@ -119,6 +119,7 @@ update msg model =
                 pc =
                     model.searchTerm
                         |> Maybe.map Postcode.fromString 
+                        |> Debug.log "result"
                         |> Maybe.andThen Result.toMaybe
                         |> Maybe.withDefault model.pc
             in

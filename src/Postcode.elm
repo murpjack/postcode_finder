@@ -1,6 +1,6 @@
 module Postcode exposing (Postcode, toString, fromString, dummyCode)
 
-import Parser exposing ((|.), (|=), Parser) 
+import Parser.Advanced exposing ((|.), (|=), Parser, DeadEnd) 
 import String
 import Char 
 
@@ -32,7 +32,40 @@ dummyCode =
         , sector = "4"
         , unit = "FA"
         }
-        
+
+type alias PostcodeParser a =
+   Parser.Advanced.Parser Never InvalidPostcode a
+
+--type Context
+--  = Definition String
+--  | List
+--  | Record
+
+
+
+type InvalidPostcode
+    = 
+    --TooShort
+    --| TooLong
+    --| UnknownChar
+    --| BadArea
+    BadDistrict String
+    --| BadSubdistrict
+    --| BadSector
+    --| BadUnit
+    | UglyRear String
+
+-- invalidPostcodeToErrorMessage : InvalidPostcode -> String
+-- invalidPostcodeToErrorMessage problem = 
+--    case problem of 
+--        TooShort -> 
+--            "This is too short"
+--
+--        UnknownChar -> 
+--            "This is too unknown"
+--
+--        TooLong -> 
+--            "This is too long"
 
 toString : Postcode -> String
 toString  { area, district, subdistrict, sector, unit } = 
@@ -40,9 +73,14 @@ toString  { area, district, subdistrict, sector, unit } =
             |> String.toUpper
 
 
-fromString : String -> Result (List Parser.DeadEnd) Postcode
+fromString : String -> Result (List (DeadEnd Never InvalidPostcode)) Postcode
 fromString =
-     Parser.run (Parser.succeed 
+     Parser.Advanced.run parsePostcode << String.reverse 
+
+
+parsePostcode : PostcodeParser Postcode
+parsePostcode = 
+    Parser.Advanced.succeed 
         (\unit sector subdistrict district area -> 
             { area = area
             , district = district
@@ -53,65 +91,46 @@ fromString =
         )
         |= chompUnit
         |= chompSector
-        |. Parser.spaces 
+        |. Parser.Advanced.spaces 
         |= chompSubdistrict  
         |= chompDistrict
         |= chompArea
-        |. Parser.end
-        ) << String.reverse
+        |. Parser.Advanced.end (UglyRear "end schade")
+        
 
 
-chompArea : Parser String
+chompArea : Parser Never InvalidPostcode String
 chompArea = 
-    (Parser.chompWhile Char.isAlpha 
-        |> Parser.getChompedString
-        |> Parser.map String.reverse
+    (Parser.Advanced.chompWhile Char.isAlpha 
+        |> Parser.Advanced.getChompedString
+        |> Parser.Advanced.map String.reverse
     )
 
-chompSubdistrict: Parser String
+chompSubdistrict: Parser Never InvalidPostcode String
 chompSubdistrict = 
-    (Parser.chompWhile Char.isAlpha 
-        |> Parser.getChompedString)
+    (Parser.Advanced.chompWhile Char.isAlpha 
+        |> Parser.Advanced.getChompedString)
 
-chompDistrict : Parser String
+chompDistrict : Parser Never InvalidPostcode String
 chompDistrict = 
-    (Parser.chompWhile Char.isDigit 
-        |> Parser.getChompedString 
-        |> Parser.map String.reverse
+    (Parser.Advanced.chompWhile Char.isDigit 
+        |> Parser.Advanced.getChompedString 
+        |> Parser.Advanced.map String.reverse
     )
 
-chompSector : Parser String
+chompSector : Parser Never InvalidPostcode String
 chompSector = 
-    (Parser.chompIf Char.isDigit 
-        |> Parser.getChompedString 
+    (Parser.Advanced.chompIf Char.isDigit (BadDistrict "district schade")
+        |> Parser.Advanced.getChompedString 
     )
 
-chompUnit : Parser String
+chompUnit : Parser Never InvalidPostcode String
 chompUnit = 
-    (Parser.chompWhile Char.isAlpha 
-        |> Parser.getChompedString
-        |> Parser.map String.reverse
+    (Parser.Advanced.chompWhile Char.isAlpha 
+        |> Parser.Advanced.getChompedString
+        |> Parser.Advanced.map String.reverse
     )
 
-
--- type alias PostcodeParser a =
---   Parser Context InvalidPostcode a
-
--- type Context
---  = Definition String
---  | List
---  | Record
-
-
---type InvalidPostcode
---    = TooShort
---    | TooLong
---    | UnknownChar
-    --| BadArea
-    --| BadDistrict
-    --| BadSubdistrict
-    --| BadSector
-    --| BadUnit
 
  
 
