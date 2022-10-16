@@ -34,38 +34,20 @@ dummyCode =
         }
 
 type alias PostcodeParser a =
-   Parser.Advanced.Parser Never InvalidPostcode a
+   Parser.Advanced.Parser Context InvalidPostcode a
 
---type Context
---  = Definition String
---  | List
---  | Record
+type Context
+  = List
 
 
 
 type InvalidPostcode
-    = 
-    --TooShort
-    --| TooLong
-    --| UnknownChar
-    --| BadArea
-    BadDistrict String
-    --| BadSubdistrict
-    --| BadSector
-    --| BadUnit
-    | UglyRear String
+    = BadArea String
+    | BadDistrict String
+    | BadSubdistrict String 
+    | BadSector String
+    | BadUnit String
 
--- invalidPostcodeToErrorMessage : InvalidPostcode -> String
--- invalidPostcodeToErrorMessage problem = 
---    case problem of 
---        TooShort -> 
---            "This is too short"
---
---        UnknownChar -> 
---            "This is too unknown"
---
---        TooLong -> 
---            "This is too long"
 
 toString : Postcode -> String
 toString  { area, district, subdistrict, sector, unit } = 
@@ -73,7 +55,7 @@ toString  { area, district, subdistrict, sector, unit } =
             |> String.toUpper
 
 
-fromString : String -> Result (List (DeadEnd Never InvalidPostcode)) Postcode
+fromString : String -> Result (List (DeadEnd Context InvalidPostcode)) Postcode
 fromString =
      Parser.Advanced.run parsePostcode << String.reverse 
 
@@ -89,55 +71,80 @@ parsePostcode =
             , unit = unit
             }
         )
+        |. Parser.Advanced.spaces 
         |= chompUnit
         |= chompSector
         |. Parser.Advanced.spaces 
         |= chompSubdistrict  
         |= chompDistrict
         |= chompArea
-        |. Parser.Advanced.end (UglyRear "end schade")
-        
+        |. Parser.Advanced.spaces 
+               
 
 
-chompArea : Parser Never InvalidPostcode String
+chompArea : Parser Context InvalidPostcode String
 chompArea = 
     (Parser.Advanced.chompWhile Char.isAlpha 
         |> Parser.Advanced.getChompedString
+        |> Parser.Advanced.andThen 
+            (\str -> 
+            if String.length str <= 2 then
+                Parser.Advanced.succeed str
+            else
+             Parser.Advanced.problem 
+                (BadArea "A UK postcode area value must have no more than 2 uppercase letters, and nothing else.")
+            )
         |> Parser.Advanced.map String.reverse
     )
 
-chompSubdistrict: Parser Never InvalidPostcode String
+chompSubdistrict: Parser Context InvalidPostcode String
 chompSubdistrict = 
     (Parser.Advanced.chompWhile Char.isAlpha 
-        |> Parser.Advanced.getChompedString)
+        |> Parser.Advanced.getChompedString
+        |> Parser.Advanced.andThen 
+            (\str -> 
+            if String.length str <= 1 then
+                Parser.Advanced.succeed str
+            else
+             Parser.Advanced.problem 
+                (BadSubdistrict "A UK postcode may have a single uppercase letter as a subdistrict, but most do not.")
+            )
+        )
 
-chompDistrict : Parser Never InvalidPostcode String
+chompDistrict : Parser Context InvalidPostcode String
 chompDistrict = 
     (Parser.Advanced.chompWhile Char.isDigit 
         |> Parser.Advanced.getChompedString 
+        |> Parser.Advanced.andThen 
+            (\str -> 
+            if String.length str <= 2 then
+                Parser.Advanced.succeed str
+            else
+             Parser.Advanced.problem 
+                (BadDistrict "A UK postcode district value must have no more than 2 numbers, and nothing else.")
+            )
         |> Parser.Advanced.map String.reverse
     )
 
-chompSector : Parser Never InvalidPostcode String
-chompSector = 
-    (Parser.Advanced.chompIf Char.isDigit (BadDistrict "district schade")
+chompSector : Parser Context InvalidPostcode String
+chompSector =
+    (Parser.Advanced.chompIf Char.isDigit 
+            (BadSector "I am expecting a sector value here but found a different value instead. A sector is a number between 0 and 9.")
         |> Parser.Advanced.getChompedString 
     )
 
-chompUnit : Parser Never InvalidPostcode String
-chompUnit = 
-    (Parser.Advanced.chompWhile Char.isAlpha 
+chompUnit : Parser Context InvalidPostcode String
+chompUnit =
+    (Parser.Advanced.chompWhile Char.isAlpha
         |> Parser.Advanced.getChompedString
+        |> Parser.Advanced.andThen 
+            (\str -> 
+            if String.length str == 2 then
+                Parser.Advanced.succeed str
+            else
+             Parser.Advanced.problem 
+                (BadUnit "A UK postcode unit value must have 2 digits.")
+            )
         |> Parser.Advanced.map String.reverse
     )
-
-
- 
-
-
-
-
-
-
-
 
