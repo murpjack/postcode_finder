@@ -8,7 +8,6 @@ import Html.Events as Events
 import Http exposing (Error(..))
 import Json.Decode as Decode exposing (Decoder)
 import Maybe.Extra as Maybe
-import Postcode exposing (Postcode)
 import RemoteData exposing (RemoteData(..), WebData)
 import Url exposing (Url)
 import Url.Parser exposing (..)
@@ -53,10 +52,8 @@ featureSpace =
 
 
 type alias Model =
-    { postcodeResults : WebData PostcodeDetails
-    , nearestPostcodesResults : WebData (List PostcodeDetails)
+    { postcodesResponse : WebData (List PostcodeDetails)
     , searchTerm : Maybe String
-    , pc : Postcode
     , searchValidation : String
     , key : Nav.Key
     }
@@ -64,23 +61,20 @@ type alias Model =
 
 initialModel : Nav.Key -> Model
 initialModel key =
-    { postcodeResults = RemoteData.NotAsked
-    , nearestPostcodesResults = RemoteData.NotAsked
+    { postcodesResponse = RemoteData.NotAsked
     , searchTerm = Nothing
     , searchValidation = ""
-    , pc = Postcode.dummyCode
     , key = key
     }
 
 
 type Msg
-    = SinglePostcode (WebData PostcodeDetails)
-    | NearestPostcodes (WebData (List PostcodeDetails))
-    | UrlRequest Browser.UrlRequest
-    | UrlChange Url
+    = PostcodesResponse (WebData (List PostcodeDetails))
     | UpdatePostcode String
     | SubmitForm
     | ResetForm
+    | UrlChange Url
+    | UrlRequest Browser.UrlRequest
 
 
 
@@ -90,21 +84,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SinglePostcode response ->
-            ( { model | postcodeResults = response }
-            , Maybe.unwrap Cmd.none (Nav.pushUrl model.key << String.toLower) model.searchTerm
-            )
+--        SinglePostcode response ->
+--            ( { model | postcodeResults = response }
+--            , Maybe.unwrap Cmd.none (Nav.pushUrl model.key << String.toLower) model.searchTerm
+--            )
 
-        NearestPostcodes response ->
-            ( { model | nearestPostcodesResults = response }
+        PostcodesResponse response ->
+            ( { model | postcodesResponse = response }
             , Cmd.none
             )
-
-        UrlRequest _ ->
-            ( model, Cmd.none )
-
-        UrlChange _ ->
-            ( model, Cmd.none )
 
         UpdatePostcode searchTerm ->
             ( { model
@@ -115,21 +103,12 @@ update msg model =
             )
 
         SubmitForm ->
-            let
-                pc =
-                    model.searchTerm
-                        |> Maybe.map Postcode.fromString 
-                        |> Debug.log "result"
-                        |> Maybe.andThen Result.toMaybe
-                        |> Maybe.withDefault model.pc
-            in
-            ( { model | pc = pc }
+            ( model
             , model.searchTerm
                 |> Maybe.unwrap Cmd.none
                     (\term ->
                         Cmd.batch
-                            [ getPostcode term
-                            , getNearestPostcodes term
+                            [ getNearestPostcodes term
                             ]
                     )
             )
@@ -141,36 +120,20 @@ update msg model =
               }
             , Cmd.none
             )
+        
+        UrlChange _ -> 
+            (model, Cmd.none)
+
+        
+        UrlRequest _ -> 
+            (model, Cmd.none)
 
 
 
 -- Data
-
-
-getPostcode : String -> Cmd Msg
-getPostcode postCode =
-    Http.get
-        { url = baseUrl ++ postCode
-        , expect =
-            Http.expectJson
-                (RemoteData.fromResult >> SinglePostcode)
-                postcodeDecoder
-        }
-
-
 baseUrl : String
 baseUrl =
     "https://api.postcodes.io/postcodes/"
-
-
-postcodeDecoder : Decoder PostcodeDetails
-postcodeDecoder =
-    Decode.field "result"
-        (Decode.map3 PostcodeDetails
-            (Decode.field "postcode" Decode.string)
-            (Decode.field "country" Decode.string)
-            (Decode.field "region" Decode.string)
-        )
 
 
 getNearestPostcodes : String -> Cmd Msg
@@ -179,19 +142,17 @@ getNearestPostcodes postCode =
         { url = baseUrl ++ postCode ++ "/nearest"
         , expect =
             Http.expectJson
-                (RemoteData.fromResult >> NearestPostcodes)
-                nearestDecoder
+                (RemoteData.fromResult >> PostcodesResponse)
+                (Decode.field "result" (Decode.list postcodeDecoder))
         }
 
 
-nearestDecoder : Decoder (List PostcodeDetails)
-nearestDecoder =
-    Decode.field "result"
-        (Decode.list <|
-            Decode.map3 PostcodeDetails
-                (Decode.field "postcode" Decode.string)
-                (Decode.field "country" Decode.string)
-                (Decode.field "region" Decode.string)
+postcodeDecoder : Decoder PostcodeDetails
+postcodeDecoder =
+        (Decode.map3 PostcodeDetails
+            (Decode.field "postcode" Decode.string)
+            (Decode.field "country" Decode.string)
+            (Decode.field "region" Decode.string)
         )
 
 
@@ -212,41 +173,29 @@ view : Model -> Browser.Document Msg
 view model =
     let
         postcodeResults =
-            case model.postcodeResults of
+            case model.postcodesResponse of
                 NotAsked ->
-                    Html.text "Initialising."
+                    [ Html.text "Initialising." ]
 
                 Loading ->
-                    Html.text "Loading."
+                    [ Html.text "Loading." ]
 
                 Failure err ->
-                    Html.text ("Error: " ++ errorToString err)
+                    [ Html.text ("Error: " ++ errorToString err) ]
 
                 Success response ->
-                    Html.div []
-                        [ Html.h2 [] [ Html.text "Matching Postcode" ]
-                        , resultItem response
-                        ]
-
-        nearestPostcodesResults =
-            case model.nearestPostcodesResults of
-                NotAsked ->
-                    Html.p [] [ Html.text "Initialising." ]
-
-                Loading ->
-                    Html.p [] [ Html.text "Loading." ]
-
-                Failure err ->
-                    Html.p [] [ Html.text ("Error: " ++ errorToString err) ]
-
-                Success response ->
-                    Html.div []
-                        [ Html.h2 [] [ Html.text "Nearby Postcodes" ]
-                        , Html.div []
-                            (response
-                                |> List.map resultItem
-                            )
-                        ]
+                    case response of
+                        [] ->
+                            []
+                                    
+                        single :: nearby ->
+                            [ Html.h2 [] [ Html.text "Matching Postcode" ] 
+                            , resultItem single
+                            , Html.h2 [] [ Html.text "Other nearby Postcodes" ] 
+                            , Html.div [] (List.map resultItem nearby) 
+                            ]
+     
+                   
     in
     { title = "Postcode finder"
     , body =
@@ -281,23 +230,18 @@ view model =
                     [ Html.button [ Events.onClick ResetForm ] [ Html.text "Reset" ]
                     , Html.button
                         [ Attrs.disabled
-                            (case model.searchTerm of
-                                Just term ->
-                                    (String.length term < 5) || (String.length term > 10)
-
-                                Nothing ->
+                            (case model.postcodesResponse of
+                                Loading ->
                                     True
+                                _ ->
+                                    False
                             )
                         , Events.onClick SubmitForm
                         ]
                         [ Html.text "Search" ]
                     ]
                 ]
-            , Html.div [ Attrs.class "results" ]
-                [ Html.text (Postcode.toString model.pc)
-                , postcodeResults
-                , nearestPostcodesResults
-                ]
+            , Html.div [ Attrs.class "results" ] postcodeResults
             ]
         , Html.div [ Attrs.class "footer" ]
             [ Html.p []
@@ -323,8 +267,11 @@ resultItem item =
 
 
 
--- JM - This handles different possible Http error types.
--- TODO: Improve Error messages to be more helpful to app user.
+
+
+
+-- This handles different possible Http error types.
+
 
 
 errorToString : Http.Error -> String

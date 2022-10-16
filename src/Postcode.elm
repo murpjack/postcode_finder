@@ -1,4 +1,4 @@
-module Postcode exposing (Postcode, toString, fromString, dummyCode)
+module Postcode exposing (Postcode, toString, fromString)
 
 import Parser.Advanced exposing ((|.), (|=), Parser, DeadEnd) 
 import String
@@ -22,15 +22,6 @@ type alias Postcode =
         , subdistrict : String
         , sector : String
         , unit : String
-        }
-
-dummyCode : Postcode 
-dummyCode =   
-        { area = "CV"
-        , district = "36"
-        , subdistrict = ""
-        , sector = "4"
-        , unit = "FA"
         }
 
 type alias PostcodeParser a =
