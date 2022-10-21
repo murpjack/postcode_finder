@@ -40,7 +40,8 @@ type alias PostcodeDetails =
     { postcode : String
     , country : String
     , region : String
-   }
+    }
+
 
 featureSpace : PostcodeDetails
 featureSpace =
@@ -48,7 +49,6 @@ featureSpace =
     , country = "England"
     , region = "East of England"
     }
-
 
 
 type alias Model =
@@ -84,11 +84,10 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
---        SinglePostcode response ->
---            ( { model | postcodeResults = response }
---            , Maybe.unwrap Cmd.none (Nav.pushUrl model.key << String.toLower) model.searchTerm
---            )
-
+        --        SinglePostcode response ->
+        --            ( { model | postcodeResults = response }
+        --            , Maybe.unwrap Cmd.none (Nav.pushUrl model.key << String.toLower) model.searchTerm
+        --            )
         PostcodesResponse response ->
             ( { model | postcodesResponse = response }
             , Cmd.none
@@ -107,9 +106,7 @@ update msg model =
             , model.searchTerm
                 |> Maybe.unwrap Cmd.none
                     (\term ->
-                        Cmd.batch
-                            [ getNearestPostcodes term
-                            ]
+                        Cmd.batch [ getNearestPostcodes term ]
                     )
             )
 
@@ -120,17 +117,18 @@ update msg model =
               }
             , Cmd.none
             )
-        
-        UrlChange _ -> 
-            (model, Cmd.none)
 
-        
-        UrlRequest _ -> 
-            (model, Cmd.none)
+        UrlChange _ ->
+            ( model, Cmd.none )
+
+        UrlRequest _ ->
+            ( model, Cmd.none )
 
 
 
 -- Data
+
+
 baseUrl : String
 baseUrl =
     "https://api.postcodes.io/postcodes/"
@@ -149,11 +147,10 @@ getNearestPostcodes postCode =
 
 postcodeDecoder : Decoder PostcodeDetails
 postcodeDecoder =
-        (Decode.map3 PostcodeDetails
-            (Decode.field "postcode" Decode.string)
-            (Decode.field "country" Decode.string)
-            (Decode.field "region" Decode.string)
-        )
+    Decode.map3 PostcodeDetails
+        (Decode.field "postcode" Decode.string)
+        (Decode.field "country" Decode.string)
+        (Decode.field "region" Decode.string)
 
 
 
@@ -187,15 +184,13 @@ view model =
                     case response of
                         [] ->
                             []
-                                    
+
                         single :: nearby ->
-                            [ Html.h2 [] [ Html.text "Matching Postcode" ] 
+                            [ Html.h2 [] [ Html.text "Matching Postcode" ]
                             , resultItem single
-                            , Html.h2 [] [ Html.text "Other nearby Postcodes" ] 
-                            , Html.div [] (List.map resultItem nearby) 
+                            , Html.h2 [] [ Html.text "Other nearby Postcodes" ]
+                            , Html.div [] (List.map resultItem nearby)
                             ]
-     
-                   
     in
     { title = "Postcode finder"
     , body =
@@ -233,6 +228,7 @@ view model =
                             (case model.postcodesResponse of
                                 Loading ->
                                     True
+
                                 _ ->
                                     False
                             )
@@ -267,11 +263,7 @@ resultItem item =
 
 
 
-
-
-
 -- This handles different possible Http error types.
-
 
 
 errorToString : Http.Error -> String
