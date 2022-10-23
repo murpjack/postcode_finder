@@ -1,4 +1,4 @@
-module Postcode exposing (Postcode, fromString, toString)
+module Postcode exposing (Postcode, listErrors, partsFromString, toString)
 
 import Char
 import Parser.Advanced exposing ((|.), (|=), DeadEnd, Parser)
@@ -13,6 +13,25 @@ import String
     A postcode is made of values, which indicate a specific location.
 
     The shortest/longest UK geographical postcodes are 5 and 7 characters.
+
+    The example below should list any problems found while parsing a piece of unstructured data.
+    
+    Example:
+     
+    myListOfHints : List String
+    myListOfHints = 
+        Postcode.partsFromString
+            >> (\res ->
+                case res of 
+                    Ok _ ->
+                        []
+
+                    Err err ->
+                        Postcode.listErrors err
+                )
+        
+    ...
+
 -}
 
 
@@ -39,6 +58,12 @@ type InvalidPostcode
     | BadSubdistrict
     | BadSector
     | BadUnit
+    | Unknown
+
+
+listErrors : List (DeadEnd Context InvalidPostcode) -> List String
+listErrors =
+    List.map (.problem >> invalidPostcodeToString)
 
 
 invalidPostcodeToString : InvalidPostcode -> String
@@ -59,6 +84,9 @@ invalidPostcodeToString msg =
         BadUnit ->
             "A UK postcode unit value must have 2 digits."
 
+        Unknown ->
+            "Ooops!? That wasn't supposed to happen..."
+
 
 toString : Postcode -> String
 toString { area, district, subdistrict, sector, unit } =
@@ -66,8 +94,8 @@ toString { area, district, subdistrict, sector, unit } =
         |> String.toUpper
 
 
-fromString : String -> Result (List (DeadEnd Context InvalidPostcode)) Postcode
-fromString =
+partsFromString : String -> Result (List (DeadEnd Context InvalidPostcode)) Postcode
+partsFromString =
     Parser.Advanced.run parsePostcode << String.reverse
 
 

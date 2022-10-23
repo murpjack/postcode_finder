@@ -8,6 +8,7 @@ import Html.Events as Events
 import Http exposing (Error(..))
 import Json.Decode as Decode exposing (Decoder)
 import Maybe.Extra as Maybe
+import Postcode
 import RemoteData exposing (RemoteData(..), WebData)
 import Url exposing (Url)
 import Url.Parser exposing (..)
@@ -54,7 +55,7 @@ featureSpace =
 type alias Model =
     { postcodesResponse : WebData (List PostcodeDetails)
     , searchTerm : Maybe String
-    , searchValidation : String
+    , searchHints : List String
     , key : Nav.Key
     }
 
@@ -63,14 +64,14 @@ initialModel : Nav.Key -> Model
 initialModel key =
     { postcodesResponse = RemoteData.NotAsked
     , searchTerm = Nothing
-    , searchValidation = ""
+    , searchHints = []
     , key = key
     }
 
 
 type Msg
     = PostcodesResponse (WebData (List PostcodeDetails))
-    | UpdatePostcode String
+    | UpdateSearchTerm String
     | SubmitForm
     | ResetForm
     | UrlChange Url
@@ -93,16 +94,31 @@ update msg model =
             , Cmd.none
             )
 
-        UpdatePostcode searchTerm ->
+        UpdateSearchTerm searchTerm ->
             ( { model
                 | searchTerm = Just searchTerm
-                , searchValidation = ""
+                , searchHints = []
               }
             , Cmd.none
             )
 
         SubmitForm ->
-            ( model
+            let
+                hints =
+                    Maybe.unwrap []
+                        (Postcode.partsFromString
+                            >> (\res ->
+                                    case res of
+                                        Ok _ ->
+                                            []
+
+                                        Err err ->
+                                            Postcode.listErrors err
+                               )
+                        )
+                        model.searchTerm
+            in
+            ( { model | searchHints = hints }
             , model.searchTerm
                 |> Maybe.unwrap Cmd.none
                     (\term ->
@@ -113,7 +129,7 @@ update msg model =
         ResetForm ->
             ( { model
                 | searchTerm = Nothing
-                , searchValidation = ""
+                , searchHints = []
               }
             , Cmd.none
             )
@@ -208,7 +224,7 @@ view model =
                     , Html.input
                         ([ Attrs.name "postcode"
                          , Attrs.id "postcode"
-                         , Events.onInput UpdatePostcode
+                         , Events.onInput UpdateSearchTerm
                          , Attrs.placeholder featureSpace.postcode
                          ]
                             ++ (case model.searchTerm of
@@ -220,6 +236,7 @@ view model =
                                )
                         )
                         []
+                    , Html.div [] (List.map Html.text model.searchHints)
                     ]
                 , Html.div [ Attrs.class "search__buttons" ]
                     [ Html.button [ Events.onClick ResetForm ] [ Html.text "Reset" ]
