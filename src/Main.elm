@@ -172,6 +172,16 @@ subscriptions _ =
 view : Model -> Browser.Document Msg
 view model =
     let
+        searchHints =
+            if List.isEmpty model.searchHints then
+                []
+
+            else
+                [ Html.div
+                    [ Attrs.class "hints" ]
+                    (List.map Html.text model.searchHints)
+                ]
+
         postcodeResults =
             case model.postcodesResponse of
                 NotAsked ->
@@ -204,10 +214,10 @@ view model =
             ]
         , Html.div [ Attrs.class "wrapper" ]
             [ Html.div [ Attrs.class "search" ]
-                [ Html.label
+                ([ Html.label
                     [ Attrs.for "postcode" ]
                     [ Html.text "Postcode" ]
-                , Html.input
+                 , Html.input
                     ([ Attrs.name "postcode"
                      , Attrs.id "postcode"
                      , Attrs.type_ "search"
@@ -223,7 +233,7 @@ view model =
                            )
                     )
                     []
-                , Html.button
+                 , Html.button
                     [ Attrs.disabled
                         (case model.postcodesResponse of
                             Loading ->
@@ -235,8 +245,9 @@ view model =
                     , Events.onClick SubmitForm
                     ]
                     [ Html.text "Search" ]
-                , Html.div [] (List.map Html.text model.searchHints)
-                ]
+                 ]
+                    ++ searchHints
+                )
             , Html.div [ Attrs.class "results" ] postcodeResults
             ]
         , Html.div [ Attrs.class "footer" ]

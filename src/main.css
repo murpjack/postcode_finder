@@ -5,13 +5,13 @@
   More context in the issue:
     https://github.com/halfzebra/create-elm-app/issues/320
 */
-[data-elm-hot='true'] {
+[data-elm-hot="true"] {
   height: inherit;
 }
 
 body {
-  font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande',
-    'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
+  font-family: "Source Sans Pro", "Trebuchet MS", "Lucida Grande",
+    "Bitstream Vera Sans", "Helvetica Neue", sans-serif;
   margin: 0;
   text-align: center;
   color: #293c4b;
@@ -72,6 +72,7 @@ h1 {
 .search {
   margin-bottom: 20px;
   margin-right: 10px;
+  min-height: 130px;
   text-align: left;
 }
 
@@ -109,13 +110,21 @@ h1 {
 }
 
 .search > button:hover {
-  opacity: .75;
+  opacity: 0.75;
 }
 
 .search > button:disabled {
   pointer-events: none;
   cursor: not-allowed;
   opacity: 0.3;
+}
+
+.search > .hints {
+  background-color: orangered;
+  color: white;
+  padding: 10px;
+  display: inline-block;
+  min-width: 65%;
 }
 
 .results__item {
