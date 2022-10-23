@@ -73,7 +73,6 @@ type Msg
     = PostcodesResponse (WebData (List PostcodeDetails))
     | UpdateSearchTerm String
     | SubmitForm
-    | ResetForm
     | UrlChange Url
     | UrlRequest Browser.UrlRequest
 
@@ -85,10 +84,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        --        SinglePostcode response ->
-        --            ( { model | postcodeResults = response }
-        --            , Maybe.unwrap Cmd.none (Nav.pushUrl model.key << String.toLower) model.searchTerm
-        --            )
         PostcodesResponse response ->
             ( { model | postcodesResponse = response }
             , Cmd.none
@@ -124,14 +119,6 @@ update msg model =
                     (\term ->
                         Cmd.batch [ getNearestPostcodes term ]
                     )
-            )
-
-        ResetForm ->
-            ( { model
-                | searchTerm = Nothing
-                , searchHints = []
-              }
-            , Cmd.none
             )
 
         UrlChange _ ->
@@ -217,42 +204,38 @@ view model =
             ]
         , Html.div [ Attrs.class "wrapper" ]
             [ Html.div [ Attrs.class "search" ]
-                [ Html.div [ Attrs.class "search__field" ]
-                    [ Html.label
-                        [ Attrs.for "postcode" ]
-                        [ Html.text "Postcode" ]
-                    , Html.input
-                        ([ Attrs.name "postcode"
-                         , Attrs.id "postcode"
-                         , Events.onInput UpdateSearchTerm
-                         , Attrs.placeholder featureSpace.postcode
-                         ]
-                            ++ (case model.searchTerm of
-                                    Just term ->
-                                        [ Attrs.value term ]
+                [ Html.label
+                    [ Attrs.for "postcode" ]
+                    [ Html.text "Postcode" ]
+                , Html.input
+                    ([ Attrs.name "postcode"
+                     , Attrs.id "postcode"
+                     , Attrs.type_ "search"
+                     , Events.onInput UpdateSearchTerm
+                     , Attrs.placeholder featureSpace.postcode
+                     ]
+                        ++ (case model.searchTerm of
+                                Just term ->
+                                    [ Attrs.value term ]
 
-                                    Nothing ->
-                                        []
-                               )
+                                Nothing ->
+                                    []
+                           )
+                    )
+                    []
+                , Html.button
+                    [ Attrs.disabled
+                        (case model.postcodesResponse of
+                            Loading ->
+                                True
+
+                            _ ->
+                                False
                         )
-                        []
-                    , Html.div [] (List.map Html.text model.searchHints)
+                    , Events.onClick SubmitForm
                     ]
-                , Html.div [ Attrs.class "search__buttons" ]
-                    [ Html.button [ Events.onClick ResetForm ] [ Html.text "Reset" ]
-                    , Html.button
-                        [ Attrs.disabled
-                            (case model.postcodesResponse of
-                                Loading ->
-                                    True
-
-                                _ ->
-                                    False
-                            )
-                        , Events.onClick SubmitForm
-                        ]
-                        [ Html.text "Search" ]
-                    ]
+                    [ Html.text "Search" ]
+                , Html.div [] (List.map Html.text model.searchHints)
                 ]
             , Html.div [ Attrs.class "results" ] postcodeResults
             ]
@@ -263,11 +246,6 @@ view model =
             ]
         ]
     }
-
-
-viewInput : String -> String -> String -> (String -> msg) -> Html msg
-viewInput t p v toMsg =
-    Html.input [ Attrs.type_ t, Attrs.placeholder p, Attrs.value v, Events.onInput toMsg ] []
 
 
 resultItem : PostcodeDetails -> Html Msg
