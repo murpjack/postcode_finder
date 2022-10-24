@@ -205,11 +205,11 @@ view model =
                             , Html.div [] (List.map resultItem nearby)
                             ]
     in
-    { title = "Postcode finder"
+    { title = "UK Postcode finder"
     , body =
         [ Html.div [ Attrs.class "header" ]
             [ Html.div [ Attrs.class "wrapper" ]
-                [ Html.h1 [] [ Html.text "Postcode Finder" ]
+                [ Html.h1 [] [ Html.text "UK Postcode Finder" ]
                 ]
             ]
         , Html.div [ Attrs.class "wrapper" ]

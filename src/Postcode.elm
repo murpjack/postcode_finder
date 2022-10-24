@@ -65,17 +65,17 @@ type InvalidPostcode
 
 listErrors : List (DeadEnd Context InvalidPostcode) -> List String
 listErrors =
-    List.map (.problem >> invalidPostcodeToString)
+    List.map ((\d -> ( d.problem, d.col )) >> invalidPostcodeToString)
 
 
-invalidPostcodeToString : InvalidPostcode -> String
-invalidPostcodeToString msg =
+invalidPostcodeToString : ( InvalidPostcode, Int ) -> String
+invalidPostcodeToString ( msg, position ) =
     case msg of
         BadArea ->
-            "A UK postcode AREA must contain 1 or 2 letters, and nothing else."
+            "A postcode AREA must contain 1 or 2 letters, and nothing else."
 
         BadDistrict ->
-            "A UK postcode district value must have no more than 2 numbers, and nothing else."
+            "A postcode DISTRICT value must have no more than 2 numbers, and nothing else."
 
         BadSubdistrict ->
             "A UK postcode may have a single uppercase letter as a subdistrict, but most do not."
@@ -87,10 +87,10 @@ invalidPostcodeToString msg =
             "A UK postcode unit value must have only 2 letters and nothing else."
 
         ExpectingAlpha ->
-            "This character should be a letter."
+            "The character at position " ++ String.fromInt position ++ "should be a letter."
 
         ExpectingInt ->
-            "This character should be a number."
+            "The character at position " ++ String.fromInt position ++ "should be a number."
 
         Unknown ->
             "Ooops!? That wasn't supposed to happen..."
