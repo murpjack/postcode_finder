@@ -90,7 +90,7 @@ invalidPostcodeToString msg =
             "This character should be a letter."
 
         ExpectingInt ->
-            "This character should be a whole number."
+            "This character should be a number."
 
         Unknown ->
             "Ooops!? That wasn't supposed to happen..."
