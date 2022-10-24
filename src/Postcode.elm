@@ -125,7 +125,7 @@ parsePostcode =
         |= chompSubdistrict
         |= chompDistrict
         |= chompArea
-        |. Parser.Advanced.spaces
+        |. Parser.Advanced.end BadArea
 
 
 chompArea : Parser Context InvalidPostcode String
@@ -162,38 +162,41 @@ chompSubdistrict =
 
 chompDistrict : Parser Context InvalidPostcode String
 chompDistrict =
-    Parser.Advanced.chompWhile Char.isDigit
-        |> Parser.Advanced.getChompedString
-        |> Parser.Advanced.andThen
-            (\str ->
-                if String.length str <= 2 then
-                    Parser.Advanced.succeed str
+    Parser.Advanced.andThen (String.reverse >> checkDistrictLength) <|
+        Parser.Advanced.getChompedString <|
+            Parser.Advanced.succeed ()
+                |. Parser.Advanced.chompIf Char.isDigit ExpectingInt
+                |. Parser.Advanced.chompIf Char.isDigit ExpectingInt
 
-                else
-                    Parser.Advanced.problem
-                        BadDistrict
-            )
-        |> Parser.Advanced.map String.reverse
+
+checkDistrictLength : String -> Parser Context InvalidPostcode String
+checkDistrictLength str =
+    if String.length str < 3 && String.length str > 0 then
+        Parser.Advanced.succeed str
+
+    else
+        Parser.Advanced.problem BadDistrict
 
 
 chompSector : Parser Context InvalidPostcode String
 chompSector =
-    Parser.Advanced.chompIf Char.isDigit
-        BadSector
+    Parser.Advanced.chompIf Char.isDigit BadSector
         |> Parser.Advanced.getChompedString
 
 
 chompUnit : Parser Context InvalidPostcode String
 chompUnit =
-    Parser.Advanced.chompWhile Char.isAlpha
-        |> Parser.Advanced.getChompedString
-        |> Parser.Advanced.andThen
-            (\str ->
-                if String.length str == 2 then
-                    Parser.Advanced.succeed str
+    Parser.Advanced.andThen (String.reverse >> checkUnitLength) <|
+        Parser.Advanced.getChompedString <|
+            Parser.Advanced.succeed ()
+                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
+                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
 
-                else
-                    Parser.Advanced.problem
-                        BadUnit
-            )
-        |> Parser.Advanced.map String.reverse
+
+checkUnitLength : String -> Parser Context InvalidPostcode String
+checkUnitLength str =
+    if String.length str == 2 then
+        Parser.Advanced.succeed str
+
+    else
+        Parser.Advanced.problem BadUnit
