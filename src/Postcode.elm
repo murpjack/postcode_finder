@@ -58,6 +58,8 @@ type InvalidPostcode
     | BadSubdistrict
     | BadSector
     | BadUnit
+    | ExpectingAlpha
+    | ExpectingInt
     | Unknown
 
 
@@ -70,7 +72,7 @@ invalidPostcodeToString : InvalidPostcode -> String
 invalidPostcodeToString msg =
     case msg of
         BadArea ->
-            "A UK postcode area value must have no more than 2 uppercase letters, and nothing else."
+            "A UK postcode AREA must contain 1 or 2 letters, and nothing else."
 
         BadDistrict ->
             "A UK postcode district value must have no more than 2 numbers, and nothing else."
@@ -82,7 +84,13 @@ invalidPostcodeToString msg =
             "Expecting a sector value here but found a different value instead. A sector is a number between 0 and 9."
 
         BadUnit ->
-            "A UK postcode unit value must have 2 digits."
+            "A UK postcode unit value must have only 2 letters and nothing else."
+
+        ExpectingAlpha ->
+            "This character should be a letter."
+
+        ExpectingInt ->
+            "This character should be a whole number."
 
         Unknown ->
             "Ooops!? That wasn't supposed to happen..."
@@ -122,17 +130,20 @@ parsePostcode =
 
 chompArea : Parser Context InvalidPostcode String
 chompArea =
-    Parser.Advanced.chompWhile Char.isAlpha
-        |> Parser.Advanced.getChompedString
-        |> Parser.Advanced.andThen
-            (\str ->
-                if String.length str <= 2 then
-                    Parser.Advanced.succeed str
+    Parser.Advanced.andThen (String.reverse >> checkAreaLength) <|
+        Parser.Advanced.getChompedString <|
+            Parser.Advanced.succeed ()
+                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
+                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
 
-                else
-                    Parser.Advanced.problem BadArea
-            )
-        |> Parser.Advanced.map String.reverse
+
+checkAreaLength : String -> Parser Context InvalidPostcode String
+checkAreaLength str =
+    if String.length str < 3 && String.length str > 0 then
+        Parser.Advanced.succeed str
+
+    else
+        Parser.Advanced.problem BadArea
 
 
 chompSubdistrict : Parser Context InvalidPostcode String
