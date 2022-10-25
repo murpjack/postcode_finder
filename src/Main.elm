@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (Html)
+import Html exposing (Attribute, Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
 import Http exposing (Error(..))
@@ -114,11 +114,15 @@ update msg model =
                         model.searchTerm
             in
             ( { model | searchHints = hints }
-            , model.searchTerm
-                |> Maybe.unwrap Cmd.none
-                    (\term ->
-                        Cmd.batch [ getNearestPostcodes term ]
-                    )
+            , if List.isEmpty model.searchHints then
+                model.searchTerm
+                    |> Maybe.unwrap Cmd.none
+                        (\term ->
+                            Cmd.batch [ getNearestPostcodes term ]
+                        )
+
+              else
+                Cmd.none
             )
 
         UrlChange _ ->
@@ -222,6 +226,7 @@ view model =
                      , Attrs.id "postcode"
                      , Attrs.type_ "search"
                      , Events.onInput UpdateSearchTerm
+                     , onEnter SubmitForm
                      , Attrs.placeholder featureSpace.postcode
                      ]
                         ++ (case model.searchTerm of
@@ -266,6 +271,19 @@ resultItem item =
         , Html.p [] [ Html.text ("Country: " ++ item.country) ]
         , Html.p [] [ Html.text ("Region: " ++ item.region) ]
         ]
+
+
+onEnter : Msg -> Attribute Msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Decode.succeed msg
+
+            else
+                Decode.fail "not ENTER"
+    in
+    Events.on "keydown" (Decode.andThen isEnter Events.keyCode)
 
 
 

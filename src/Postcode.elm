@@ -72,25 +72,25 @@ invalidPostcodeToString : ( InvalidPostcode, Int ) -> String
 invalidPostcodeToString ( msg, position ) =
     case msg of
         BadArea ->
-            "A postcode AREA must contain 1 or 2 letters, and nothing else."
+            "A postal AREA must contain 1 or 2 letters. Something looks incorrect."
 
         BadDistrict ->
-            "A postcode DISTRICT value must have no more than 2 numbers, and nothing else."
+            "A postal DISTRICT must have 1 or 2 numbers. Something looks incorrect."
 
         BadSubdistrict ->
-            "A UK postcode may have a single uppercase letter as a subdistrict, but most do not."
+            "A postal SUBDISTRICT must be a single letter. Something looks incorrect."
 
         BadSector ->
-            "Expecting a sector value here but found a different value instead. A sector is a number between 0 and 9."
+            "A postal SECTOR must be a number between 0 and 9. Something looks incorrect."
 
         BadUnit ->
-            "A UK postcode unit value must have only 2 letters and nothing else."
+            "A postal UNIT must have only 2 letters. Something looks incorrect."
 
         ExpectingAlpha ->
-            "The character at position " ++ String.fromInt position ++ "should be a letter."
+            "The character at position " ++ String.fromInt position ++ " should be a letter."
 
         ExpectingInt ->
-            "The character at position " ++ String.fromInt position ++ "should be a number."
+            "The character at position " ++ String.fromInt position ++ " should be a number."
 
         Unknown ->
             "Ooops!? That wasn't supposed to happen..."
@@ -132,9 +132,14 @@ chompArea : Parser Context InvalidPostcode String
 chompArea =
     Parser.Advanced.andThen (String.reverse >> checkAreaLength) <|
         Parser.Advanced.getChompedString <|
-            Parser.Advanced.succeed ()
-                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
-                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
+            Parser.Advanced.oneOf
+                [ Parser.Advanced.succeed ()
+                    |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
+                    |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
+                , Parser.Advanced.chompIf Char.isDigit BadArea
+                    |> Parser.Advanced.andThen
+                        (\_ -> Parser.Advanced.problem BadArea)
+                ]
 
 
 checkAreaLength : String -> Parser Context InvalidPostcode String
@@ -180,8 +185,13 @@ checkDistrictLength str =
 
 chompSector : Parser Context InvalidPostcode String
 chompSector =
-    Parser.Advanced.chompIf Char.isDigit BadSector
-        |> Parser.Advanced.getChompedString
+    Parser.Advanced.oneOf
+        [ Parser.Advanced.chompIf Char.isDigit BadSector
+            |> Parser.Advanced.getChompedString
+        , Parser.Advanced.chompIf (Char.isDigit >> not) BadUnit
+            |> Parser.Advanced.andThen
+                (\_ -> Parser.Advanced.problem BadUnit)
+        ]
 
 
 chompUnit : Parser Context InvalidPostcode String

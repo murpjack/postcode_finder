@@ -13,7 +13,6 @@ body {
   font-family: "Source Sans Pro", "Trebuchet MS", "Lucida Grande",
     "Bitstream Vera Sans", "Helvetica Neue", sans-serif;
   margin: 0;
-  text-align: center;
   color: #293c4b;
 }
 
@@ -88,6 +87,7 @@ h1 {
   text-transform: uppercase;
   font-weight: 600;
   padding-left: 10px;
+  padding-right: 10px;
   margin-bottom: 15px;
   height: 48px;
   min-width: 100px;
@@ -120,16 +120,15 @@ h1 {
 }
 
 .search > .hints {
-  background-color: orangered;
+  background-color: #900c3f;
   color: white;
+  font-weight: 600;
   padding: 10px;
-  display: inline-block;
-  min-width: 65%;
+  display: block;
 }
 
 .results__item {
-  border-bottom: 3px solid lightsteelblue;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   padding-bottom: 10px;
 }
 
@@ -138,5 +137,5 @@ h1 {
   margin: 0;
   display: block;
   text-align: left;
-  padding: 5px 15px;
+  padding: 5px 0px;
 }
