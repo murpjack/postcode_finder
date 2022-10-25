@@ -189,13 +189,13 @@ view model =
         postcodeResults =
             case model.postcodesResponse of
                 NotAsked ->
-                    [ Html.text "Initialising." ]
+                    [ Html.text "..." ]
 
                 Loading ->
-                    [ Html.text "Loading." ]
+                    [ Html.text "Searching for postcodes" ]
 
                 Failure err ->
-                    [ Html.text ("Error: " ++ errorToString err) ]
+                    [ Html.text ("Its seems there is an error: " ++ errorToString err) ]
 
                 Success response ->
                     case response of
