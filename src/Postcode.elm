@@ -50,6 +50,7 @@ type alias PostcodeParser a =
 
 type Context
     = List
+    | Definition String
 
 
 type InvalidPostcode
@@ -65,7 +66,8 @@ type InvalidPostcode
 
 listErrors : List (DeadEnd Context InvalidPostcode) -> List String
 listErrors =
-    List.map ((\d -> ( d.problem, d.col )) >> invalidPostcodeToString)
+    List.map
+        ((\d -> ( d.problem, d.col )) >> invalidPostcodeToString)
 
 
 invalidPostcodeToString : ( InvalidPostcode, Int ) -> String
@@ -144,8 +146,16 @@ chompArea =
 
 checkAreaLength : String -> Parser Context InvalidPostcode String
 checkAreaLength str =
-    if String.length str < 3 && String.length str > 0 then
+    if String.length str == 1 then
         Parser.Advanced.succeed str
+
+    else if String.length str == 2 then
+        if String.all Char.isAlpha str then
+            Parser.Advanced.succeed str
+
+        else
+            Parser.Advanced.inContext (Definition "Cheese") <|
+                Parser.Advanced.problem ExpectingAlpha
 
     else
         Parser.Advanced.problem BadArea
@@ -171,13 +181,20 @@ chompDistrict =
         Parser.Advanced.getChompedString <|
             Parser.Advanced.succeed ()
                 |. Parser.Advanced.chompIf Char.isDigit ExpectingInt
-                |. Parser.Advanced.chompIf Char.isDigit ExpectingInt
+                |. Parser.Advanced.chompWhile Char.isDigit
 
 
 checkDistrictLength : String -> Parser Context InvalidPostcode String
 checkDistrictLength str =
-    if String.length str < 3 && String.length str > 0 then
+    if String.length str == 1 then
         Parser.Advanced.succeed str
+
+    else if String.length str == 2 then
+        if String.all Char.isDigit str then
+            Parser.Advanced.succeed str
+
+        else
+            Parser.Advanced.problem ExpectingInt
 
     else
         Parser.Advanced.problem BadDistrict
