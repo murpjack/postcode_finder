@@ -127,6 +127,15 @@ h1 {
   display: block;
 }
 
+table {
+  margin-bottom: 30px;
+}
+
+th,
+th {
+  padding-right: 15px;
+}
+
 .results__item {
   margin-bottom: 20px;
   padding-bottom: 10px;

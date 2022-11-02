@@ -1,7 +1,7 @@
-module Postcode exposing (Postcode, listErrors, partsFromString, toString)
+module Postcode exposing (Postcode, listErrors, parsePostcode)
 
 import Char
-import Parser.Advanced exposing ((|.), (|=), DeadEnd, Parser)
+import Parser.Advanced as Parser exposing ((|.), (|=), DeadEnd, Parser)
 import String
 
 
@@ -13,217 +13,157 @@ import String
     A postcode is made of values, which indicate a specific location.
 
     The shortest/longest UK geographical postcodes are 5 and 7 characters.
-
-    The example below should list any problems found while parsing a piece of unstructured data.
     
-    Example:
-     
-    myListOfHints : List String
-    myListOfHints = 
-        Postcode.partsFromString
-            >> (\res ->
-                case res of 
-                    Ok _ ->
-                        []
-
-                    Err err ->
-                        Postcode.listErrors err
-                )
-        
-    ...
-
 -}
 
 
 type alias Postcode =
-    { area : String
-    , district : String
-    , subdistrict : String
-    , sector : String
-    , unit : String
-    }
+    String
 
 
 type alias PostcodeParser a =
-    Parser.Advanced.Parser Context InvalidPostcode a
+    Parser Context InvalidPostcode a
 
 
 type Context
     = List
-    | Definition String
 
 
 type InvalidPostcode
-    = BadArea
-    | BadDistrict
-    | BadSubdistrict
-    | BadSector
-    | BadUnit
-    | ExpectingAlpha
-    | ExpectingInt
-    | Unknown
-
-
-listErrors : List (DeadEnd Context InvalidPostcode) -> List String
-listErrors =
-    List.map
-        ((\d -> ( d.problem, d.col )) >> invalidPostcodeToString)
+    = ExpectingArea
+    | ExpectingDistrict
+    | ExpectingDistrictOrSector
+    | ExpectingSubdistrict
+    | ExpectingSector
+    | ExpectingUnit
 
 
 invalidPostcodeToString : ( InvalidPostcode, Int ) -> String
 invalidPostcodeToString ( msg, position ) =
     case msg of
-        BadArea ->
+        ExpectingArea ->
             "A postal AREA must contain 1 or 2 letters. Something looks incorrect."
 
-        BadDistrict ->
+        ExpectingDistrict ->
             "A postal DISTRICT must have 1 or 2 numbers. Something looks incorrect."
 
-        BadSubdistrict ->
+        ExpectingDistrictOrSector ->
+            "Expecting a number at position " ++ String.fromInt position ++ ". Something looks incorrect."
+
+        ExpectingSubdistrict ->
             "A postal SUBDISTRICT must be a single letter. Something looks incorrect."
 
-        BadSector ->
+        ExpectingSector ->
             "A postal SECTOR must be a number between 0 and 9. Something looks incorrect."
 
-        BadUnit ->
-            "A postal UNIT must have only 2 letters. Something looks incorrect."
-
-        ExpectingAlpha ->
-            "The character at position " ++ String.fromInt position ++ " should be a letter."
-
-        ExpectingInt ->
-            "The character at position " ++ String.fromInt position ++ " should be a number."
-
-        Unknown ->
-            "Ooops!? That wasn't supposed to happen..."
+        ExpectingUnit ->
+            "A postal UNIT must have exactly 2 letters. Something looks incorrect."
 
 
-toString : Postcode -> String
-toString { area, district, subdistrict, sector, unit } =
-    (area ++ district ++ subdistrict ++ " " ++ sector ++ unit)
-        |> String.toUpper
+parsePostcode : String -> List String
+parsePostcode input =
+    case Parser.run chompPostcode input of
+        Ok _ ->
+            []
+
+        Err ls ->
+            listErrors ls
 
 
-partsFromString : String -> Result (List (DeadEnd Context InvalidPostcode)) Postcode
-partsFromString =
-    Parser.Advanced.run parsePostcode << String.reverse
+listErrors : List (DeadEnd Context InvalidPostcode) -> List String
+listErrors errors =
+    errors
+        |> List.head
+        |> Maybe.map ((\d -> ( d.problem, d.col )) >> invalidPostcodeToString >> List.singleton)
+        |> Maybe.withDefault []
 
 
-parsePostcode : PostcodeParser Postcode
-parsePostcode =
-    Parser.Advanced.succeed
-        (\unit sector subdistrict district area ->
-            { area = area
-            , district = district
-            , subdistrict = subdistrict
-            , sector = sector
-            , unit = unit
-            }
-        )
-        |. Parser.Advanced.spaces
-        |= chompUnit
-        |= chompSector
-        |. Parser.Advanced.spaces
-        |= chompSubdistrict
-        |= chompDistrict
-        |= chompArea
-        |. Parser.Advanced.end BadArea
+
+{--
+    Parse a postcode which conforms to any of the following formats, 
+    where 'a' is a letter and '9' is a number 
+        
+    * a9_9aa
+    * a99_9aa
+    * a9a_9aa
+    * aa9_9aa
+    * aa99_9aa
+    * aa9a_9aa
+
+-}
 
 
-chompArea : Parser Context InvalidPostcode String
-chompArea =
-    Parser.Advanced.andThen (String.reverse >> checkAreaLength) <|
-        Parser.Advanced.getChompedString <|
-            Parser.Advanced.oneOf
-                [ Parser.Advanced.succeed ()
-                    |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
-                    |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
-                , Parser.Advanced.chompIf Char.isDigit BadArea
-                    |> Parser.Advanced.andThen
-                        (\_ -> Parser.Advanced.problem BadArea)
+chompPostcode : PostcodeParser String
+chompPostcode =
+    Parser.getChompedString <|
+        Parser.succeed ()
+            |. Parser.spaces
+            -- Area - first char
+            |. Parser.chompIf Char.isAlpha ExpectingArea
+            |. Parser.oneOf
+                [ -- Area - second char
+                  Parser.chompIf Char.isAlpha ExpectingArea
+                    -- District - first char
+                    |. Parser.chompIf Char.isDigit ExpectingDistrict
+                    |. Parser.oneOf
+                        [ -- This digit could be a second district char or a sector
+                          Parser.chompIf Char.isDigit ExpectingDistrictOrSector
+                            |. Parser.oneOf
+                                [ chompIncode
+                                , chompUnit
+                                ]
+                        , chompSubdistrict
+                            |. chompIncode
+                        ]
+
+                -- District - first char
+                , Parser.chompIf Char.isDigit ExpectingDistrict
+                    |. Parser.oneOf
+                        [ -- This digit could be a second district char or a sector
+                          Parser.chompIf Char.isDigit ExpectingDistrictOrSector
+                            |. Parser.oneOf
+                                [ chompIncode
+                                , chompUnit
+                                ]
+                        , chompSubdistrict
+                            |. chompIncode
+                        ]
                 ]
+            |. Parser.end ExpectingUnit
 
 
-checkAreaLength : String -> Parser Context InvalidPostcode String
-checkAreaLength str =
-    if String.length str == 1 then
-        Parser.Advanced.succeed str
-
-    else if String.length str == 2 then
-        if String.all Char.isAlpha str then
-            Parser.Advanced.succeed str
-
-        else
-            Parser.Advanced.inContext (Definition "Cheese") <|
-                Parser.Advanced.problem ExpectingAlpha
-
-    else
-        Parser.Advanced.problem BadArea
+chompIncode : PostcodeParser String
+chompIncode =
+    Parser.getChompedString <|
+        Parser.succeed ()
+            |. Parser.spaces
+            |. chompSector
+            |. chompUnit
 
 
-chompSubdistrict : Parser Context InvalidPostcode String
+chompSubdistrict : PostcodeParser ()
 chompSubdistrict =
-    Parser.Advanced.chompWhile Char.isAlpha
-        |> Parser.Advanced.getChompedString
-        |> Parser.Advanced.andThen
-            (\str ->
-                if String.length str <= 1 then
-                    Parser.Advanced.succeed str
-
-                else
-                    Parser.Advanced.problem BadSubdistrict
-            )
+    Parser.chompIf Char.isAlpha ExpectingSubdistrict
 
 
-chompDistrict : Parser Context InvalidPostcode String
-chompDistrict =
-    Parser.Advanced.andThen (String.reverse >> checkDistrictLength) <|
-        Parser.Advanced.getChompedString <|
-            Parser.Advanced.succeed ()
-                |. Parser.Advanced.chompIf Char.isDigit ExpectingInt
-                |. Parser.Advanced.chompWhile Char.isDigit
-
-
-checkDistrictLength : String -> Parser Context InvalidPostcode String
-checkDistrictLength str =
-    if String.length str == 1 then
-        Parser.Advanced.succeed str
-
-    else if String.length str == 2 then
-        if String.all Char.isDigit str then
-            Parser.Advanced.succeed str
-
-        else
-            Parser.Advanced.problem ExpectingInt
-
-    else
-        Parser.Advanced.problem BadDistrict
-
-
-chompSector : Parser Context InvalidPostcode String
+chompSector : PostcodeParser ()
 chompSector =
-    Parser.Advanced.oneOf
-        [ Parser.Advanced.chompIf Char.isDigit BadSector
-            |> Parser.Advanced.getChompedString
-        , Parser.Advanced.chompIf (Char.isDigit >> not) BadUnit
-            |> Parser.Advanced.andThen
-                (\_ -> Parser.Advanced.problem BadUnit)
-        ]
+    Parser.chompIf Char.isDigit ExpectingSector
 
 
-chompUnit : Parser Context InvalidPostcode String
+chompUnit : PostcodeParser String
 chompUnit =
-    Parser.Advanced.andThen (String.reverse >> checkUnitLength) <|
-        Parser.Advanced.getChompedString <|
-            Parser.Advanced.succeed ()
-                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
-                |. Parser.Advanced.chompIf Char.isAlpha ExpectingAlpha
+    Parser.andThen checkUnitLength <|
+        Parser.getChompedString <|
+            Parser.succeed ()
+                |. Parser.chompIf Char.isAlpha ExpectingUnit
+                |. Parser.chompIf Char.isAlpha ExpectingUnit
 
 
 checkUnitLength : String -> Parser Context InvalidPostcode String
 checkUnitLength str =
     if String.length str == 2 then
-        Parser.Advanced.succeed str
+        Parser.succeed str
 
     else
-        Parser.Advanced.problem BadUnit
+        Parser.problem ExpectingUnit

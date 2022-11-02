@@ -101,20 +101,11 @@ update msg model =
             let
                 hints =
                     Maybe.unwrap []
-                        (Postcode.partsFromString
-                            >> (\res ->
-                                    case res of
-                                        Ok _ ->
-                                            []
-
-                                        Err err ->
-                                            Postcode.listErrors err
-                               )
-                        )
+                        Postcode.parsePostcode
                         model.searchTerm
             in
             ( { model | searchHints = hints }
-            , if List.isEmpty model.searchHints then
+            , if List.isEmpty hints then
                 model.searchTerm
                     |> Maybe.unwrap Cmd.none
                         (\term ->
@@ -203,11 +194,18 @@ view model =
                             []
 
                         single :: nearby ->
-                            [ Html.h2 [] [ Html.text "Matching Postcode" ]
-                            , resultItem single
-                            , Html.h2 [] [ Html.text "Other nearby Postcodes" ]
-                            , Html.div [] (List.map resultItem nearby)
-                            ]
+                            List.concat
+                                [ [ Html.h2 [] [ Html.text "Matching Postcode" ]
+                                  , resultItem single
+                                  ]
+                                , if List.isEmpty nearby then
+                                    []
+
+                                  else
+                                    [ Html.h2 [] [ Html.text "Other nearby Postcodes" ]
+                                    , Html.div [] (List.map resultItem nearby)
+                                    ]
+                                ]
     in
     { title = "UK Postcode finder"
     , body =
@@ -217,7 +215,8 @@ view model =
                 ]
             ]
         , Html.div [ Attrs.class "wrapper" ]
-            [ Html.div [ Attrs.class "search" ]
+            [ postcodeRulesTable
+            , Html.div [ Attrs.class "search" ]
                 ([ Html.label
                     [ Attrs.for "postcode" ]
                     [ Html.text "Postcode" ]
@@ -262,6 +261,91 @@ view model =
             ]
         ]
     }
+
+
+postcodeRulesTable : Html msg
+postcodeRulesTable =
+    Html.div [ Attrs.style "margin-bottom" "30px" ]
+        [ Html.p []
+            [ Html.text "UK postcodes can assume one of the following patterns:" ]
+        , Html.table
+            []
+            [ Html.thead []
+                [ Html.tr []
+                    [ Html.th [] [ Html.text "Postcode Format" ]
+                    , Html.th [] [ Html.text "Outward Code" ]
+                    , Html.th [] [ Html.text "Inward Code" ]
+                    , Html.th [] [ Html.text "Postcode Area" ]
+                    , Html.th [] [ Html.text "District Code" ]
+                    , Html.th [] [ Html.text "Sub-District" ]
+                    , Html.th [] [ Html.text "Sector" ]
+                    , Html.th [] [ Html.text "Unit" ]
+                    ]
+                ]
+            , Html.tbody []
+                [ Html.tr []
+                    [ Html.td [] [ Html.code [] [ Html.text "AA9A 9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9A 9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    ]
+                , Html.tr []
+                    [ Html.td [] [ Html.code [] [ Html.text "A9A 9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9A 9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    ]
+                , Html.tr []
+                    [ Html.td [] [ Html.code [] [ Html.text "A9 9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9" ] ]
+                    , Html.td [] [ Html.strong [] [ Html.text "N/A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A9 9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    ]
+                , Html.tr []
+                    [ Html.td [] [ Html.code [] [ Html.text "A99 9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A99" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A99" ] ]
+                    , Html.td [] [ Html.strong [] [ Html.text "N/A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "A99 9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    ]
+                , Html.tr []
+                    [ Html.td [] [ Html.code [] [ Html.text "AA9 9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9" ] ]
+                    , Html.td [] [ Html.strong [] [ Html.text "N/A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA9 9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    ]
+                , Html.tr []
+                    [ Html.td [] [ Html.code [] [ Html.text "AA99 9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA99" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "9AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA99" ] ]
+                    , Html.td [] [ Html.strong [] [ Html.text "N/A" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA99 9" ] ]
+                    , Html.td [] [ Html.code [] [ Html.text "AA" ] ]
+                    ]
+                ]
+            ]
+        ]
 
 
 resultItem : PostcodeDetails -> Html Msg
