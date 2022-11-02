@@ -11,9 +11,25 @@ import String
     
     You love them. I love them. Postcodes.
     A postcode is made of values, which indicate a specific location.
-
-    The shortest/longest UK geographical postcodes are 5 and 7 characters.
+    A geographic UK postcode includes: 
+        an AREA, DISTRICT, SUBDISTRICT, SECTOR, and a UNIT.
     
+    Some rules:
+    * An AREA may be 1 or 2 alpha chars
+    * A DISTRICT may be 1 or 2 digit chars
+    * A SUBDISTRICT if present will be 1 alpha char
+    * A SECTOR will be 1 digit char
+    * A UNIT MUST have exactly 2 alpha chars.
+
+    See below a list of valid postcode formats:
+        
+    * A9 9AA
+    * A99 9AA
+    * A9A 9AA
+    * AA9 9AA
+    * AA99 9AA
+    * AA9A 9AA
+ 
 -}
 
 
@@ -76,21 +92,6 @@ listErrors errors =
         |> List.head
         |> Maybe.map ((\d -> ( d.problem, d.col )) >> invalidPostcodeToString >> List.singleton)
         |> Maybe.withDefault []
-
-
-
-{--
-    Parse a postcode which conforms to any of the following formats, 
-    where 'a' is a letter and '9' is a number 
-        
-    * a9_9aa
-    * a99_9aa
-    * a9a_9aa
-    * aa9_9aa
-    * aa99_9aa
-    * aa9a_9aa
-
--}
 
 
 chompPostcode : PostcodeParser String
