@@ -1,4 +1,4 @@
-module Postcode exposing (Postcode, listErrors, parsePostcode)
+module Postcode exposing (InvalidPostcode(..), Postcode, invalidPostcodeToString, listErrors, parsePostcode)
 
 import Char
 import Parser.Advanced as Parser exposing ((|.), (|=), DeadEnd, Parser)
