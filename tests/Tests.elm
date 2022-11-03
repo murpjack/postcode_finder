@@ -17,6 +17,26 @@ all =
         , test "DISTRICT should ONLY contain numeric characters." <|
             \_ ->
                 errorFromBadPostcode "AA@9 9AA" ExpectingDistrict
+        , test "Space between DISTRICT and SECTOR in AA9 9AA should be valid." <|
+            \_ ->
+                let
+                    postcodeString =
+                        "AA9 9AA"
+
+                    noErrors =
+                        []
+                in
+                Expect.equal noErrors (Postcode.parsePostcode postcodeString)
+        , test "Space between DISTRICT and SECTOR in A9 9AA should be valid." <|
+            \_ ->
+                let
+                    postcodeString =
+                        "A9 9AA"
+
+                    noErrors =
+                        []
+                in
+                Expect.equal noErrors (Postcode.parsePostcode postcodeString)
         , test "DISTRICT should have 1 or 2 characters." <|
             \_ ->
                 errorFromBadPostcode "AA 9AA" ExpectingDistrict

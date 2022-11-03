@@ -108,7 +108,8 @@ chompPostcode =
                     |. Parser.chompIf Char.isDigit ExpectingDistrict
                     |. Parser.oneOf
                         [ -- This digit could be a second district char or a sector
-                          Parser.chompIf Char.isDigit ExpectingDistrictOrSector
+                          Parser.spaces
+                            |. Parser.chompIf Char.isDigit ExpectingDistrictOrSector
                             |. Parser.oneOf
                                 [ chompIncode
                                 , chompUnit
@@ -121,7 +122,8 @@ chompPostcode =
                 , Parser.chompIf Char.isDigit ExpectingDistrict
                     |. Parser.oneOf
                         [ -- This digit could be a second district char or a sector
-                          Parser.chompIf Char.isDigit ExpectingDistrictOrSector
+                          Parser.spaces
+                            |. Parser.chompIf Char.isDigit ExpectingDistrictOrSector
                             |. Parser.oneOf
                                 [ chompIncode
                                 , chompUnit
@@ -135,11 +137,20 @@ chompPostcode =
 
 chompIncode : PostcodeParser String
 chompIncode =
-    Parser.getChompedString <|
-        Parser.succeed ()
-            |. Parser.spaces
-            |. chompSector
-            |. chompUnit
+    Parser.andThen
+        (\s ->
+            let
+                _ =
+                    Debug.log "s" s
+            in
+            Parser.succeed s
+        )
+    <|
+        Parser.getChompedString <|
+            Parser.succeed ()
+                |. Parser.spaces
+                |. chompSector
+                |. chompUnit
 
 
 chompSubdistrict : PostcodeParser ()
