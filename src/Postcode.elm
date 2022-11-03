@@ -137,20 +137,11 @@ chompPostcode =
 
 chompIncode : PostcodeParser String
 chompIncode =
-    Parser.andThen
-        (\s ->
-            let
-                _ =
-                    Debug.log "s" s
-            in
-            Parser.succeed s
-        )
-    <|
-        Parser.getChompedString <|
-            Parser.succeed ()
-                |. Parser.spaces
-                |. chompSector
-                |. chompUnit
+    Parser.getChompedString <|
+        Parser.succeed ()
+            |. Parser.spaces
+            |. chompSector
+            |. chompUnit
 
 
 chompSubdistrict : PostcodeParser ()
